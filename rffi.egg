@@ -1,0 +1,6 @@
+((synopsis "Interface to R")
+ (author "Hiroki Yagi")
+ (license "public domain")
+ (category ffi)
+ (build-dependencies shell srfi-13)
+ (components (extension rffi (custom-build "build.sh") (csc-options "-d2" "-O0" "-c++"))))

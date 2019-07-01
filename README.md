@@ -1,0 +1,3 @@
+# rffi
+
+In macos, g++ 
