@@ -4,6 +4,7 @@
 *.import.scm
 *.link
 
+rffi.cpp
 rffi.build.sh
 rffi.install.sh
 clean.sh
