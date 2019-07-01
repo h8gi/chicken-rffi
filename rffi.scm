@@ -3,6 +3,9 @@
 
   (import scheme (chicken base) (chicken foreign) bind coops cplusplus-object)
 
+(define x
+  (foo 12))
+
 #>
 #include <RInside.h>
 using Rcpp::RObject;
@@ -53,18 +56,20 @@ CPP
 )
 
 (define r-eval rffi_eval)
-(define robject->string RObject_Type_asString)
 
+(define r-object-type-string RObject_Type_asString)
 
 ;; Scheme -> R
 (define (r-object-to value)
-  (cond
-   [(integer? value) value]
-   [else value]))
+  (cond [(integer? value) value]
+        [else value]))
+
+
 
 ;; R -> Scheme
-;; (define (r-object-from value)
-;;   ())
+(define (r-object-from x)
+  (if (string=? (r-object-type-string x) "NumericVector")
+      ()))
 
 
 )
