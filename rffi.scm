@@ -1,10 +1,7 @@
 (module rffi
    *
 
-  (import scheme (chicken base) (chicken foreign) bind coops cplusplus-object)
-
-(define x
-  (foo 12))
+  (import scheme (chicken base) (chicken foreign) bind)
 
 #>
 #include <RInside.h>
@@ -52,6 +49,25 @@ char *RObject_Type_asString(robject robj) {
 	type_str = "unknown";
     C_return(type_str);
 }
+
+double *NumericVector_to_DoubleArray(robject robj) {
+    std::vector<double> cpp_vect = Rcpp::as< std::vector<double> >(*robj);
+    for (double x : cpp_vect) {
+	std::cout << x << "\n";
+    }
+    double *v = &cpp_vect.front();
+    return v;
+}
+
+double NumericVector_ref(robject robj, int i) {
+    std::vector<double> cpp_vect = Rcpp::as< std::vector<double> >(*robj);
+    return cpp_vect[i];
+}
+
+int Vector_length(robject robj) {
+    return (Rcpp::as< Rcpp::NumericVector >(*robj)).length();
+}
+
 CPP
 )
 
@@ -64,12 +80,18 @@ CPP
   (cond [(integer? value) value]
         [else value]))
 
-
+(define (r-vector->scheme-vector value ref-proc len-proc)
+  (let ([length (len-proc value)])
+    (do ((vector (make-vector length))
+         (i 0 (+ i 1)))
+        ((= i length) vector)
+      (vector-set! vector i (ref-proc value i)))))
 
 ;; R -> Scheme
 (define (r-object-from x)
   (if (string=? (r-object-type-string x) "NumericVector")
-      ()))
+      (r-vector->scheme-vector x NumericVector_ref Vector_length)
+      x))
 
 
 )
