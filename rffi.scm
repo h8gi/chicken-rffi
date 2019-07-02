@@ -50,22 +50,19 @@ char *RObject_Type_asString(robject robj) {
     C_return(type_str);
 }
 
-double *NumericVector_to_DoubleArray(robject robj) {
-    std::vector<double> cpp_vect = Rcpp::as< std::vector<double> >(*robj);
-    for (double x : cpp_vect) {
-	std::cout << x << "\n";
-    }
-    double *v = &cpp_vect.front();
-    return v;
-}
-
 double NumericVector_ref(robject robj, int i) {
-    std::vector<double> cpp_vect = Rcpp::as< std::vector<double> >(*robj);
-    return cpp_vect[i];
+    return (Rcpp::as< Rcpp::NumericVector >(*robj))[i];
 }
 
-int Vector_length(robject robj) {
-    return (Rcpp::as< Rcpp::NumericVector >(*robj)).length();
+int IntegerVector_ref(robject robj, int i) {
+    return (Rcpp::as< Rcpp::IntegerVector >(*robj))[i];
+}
+
+char *CharacterVector_ref(robject robj, int i) {
+    return (Rcpp::as< Rcpp::CharacterVector >(*robj))[i];
+}
+int R_length(robject robj) {
+    return Rf_length((SEXP) *robj);
 }
 
 CPP
@@ -90,7 +87,7 @@ CPP
 ;; R -> Scheme
 (define (r-object-from x)
   (if (string=? (r-object-type-string x) "NumericVector")
-      (r-vector->scheme-vector x NumericVector_ref Vector_length)
+      (r-vector->scheme-vector x NumericVector_ref R_length)
       x))
 
 
