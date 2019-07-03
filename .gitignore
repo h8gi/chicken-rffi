@@ -3,6 +3,7 @@
 *.a
 *.import.scm
 *.link
+README.html
 
 rffi.cpp
 rffi.build.sh
@@ -69,7 +70,7 @@ flycheck_*.el
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
 
 # Thumbnails
 ._*
@@ -100,5 +101,3 @@ Temporary Items
 *.scm~
 *.scm#*
 .#*.scm
-
-
