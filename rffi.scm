@@ -10,7 +10,26 @@ RInside rinstance(0, 0, true, false, true);
 Rcpp::RObject currentRobj;
 <#
 
-(bind-type robject (c-pointer "RObject"))
+;; Scheme -> R
+(define (scheme-object->r-object value)
+  (cond [(integer? value) value]
+        [else value]))
+
+(define (r-vector->scheme-vector value ref-proc len-proc)
+  (let ([length (len-proc value)])
+    (do ((vector (make-vector length))
+         (i 0 (+ i 1)))
+        ((= i length) vector)
+      (vector-set! vector i (ref-proc value i)))))
+
+;; R -> Scheme
+(define (r-object->scheme-object x)
+  (if (string=? (r-object-type-string x) "NumericVector")
+      (r-vector->scheme-vector x NumericVector_ref R_length)
+      "<???>"))
+
+(bind-type robject (c-pointer "RObject") scheme-object->r-object r-object->scheme-object)
+
 (bind*
 #<<CPP
 robject rffi_eval(const char *str) {
@@ -70,25 +89,7 @@ CPP
 
 (define r-eval rffi_eval)
 
-(define r-object-type-string RObject_Type_asString)
-
-;; Scheme -> R
-(define (r-object-to value)
-  (cond [(integer? value) value]
-        [else value]))
-
-(define (r-vector->scheme-vector value ref-proc len-proc)
-  (let ([length (len-proc value)])
-    (do ((vector (make-vector length))
-         (i 0 (+ i 1)))
-        ((= i length) vector)
-      (vector-set! vector i (ref-proc value i)))))
-
-;; R -> Scheme
-(define (r-object-from x)
-  (if (string=? (r-object-type-string x) "NumericVector")
-      (r-vector->scheme-vector x NumericVector_ref R_length)
-      x))
-
+(define (r-object-type robj)
+  (RObject_Type_asString robj))
 
 )
