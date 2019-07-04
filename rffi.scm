@@ -69,7 +69,7 @@ RInside rinstance(0, NULL, false, false, true);
 
 (bind*
 #<<CPP
-rffi_sexp rffi_eval(const char *str) {    
+rffi_sexp rffi_eval(const char *str) {
     try {
 	// on heap???
 	return rinstance.parseEval(str);
@@ -91,7 +91,8 @@ int integer_vector_ref(rffi_sexp rsxp, int i) {
 }
 
 rffi_sexp list_ref(rffi_sexp rsxp, int i) {
-    return VECTOR_ELT((SEXP) rsxp, i);
+    return Rcpp::as<Rcpp::List>((SEXP) rsxp)[i];
+    // return VECTOR_ELT((SEXP) rsxp, i);
 }
 
 int rffi_sexp_type(rffi_sexp rsxp) {
