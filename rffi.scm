@@ -1,12 +1,13 @@
 (module rffi
    *
 
-  (import scheme (chicken base) (chicken foreign) bind)
+  (import scheme (chicken base) (chicken foreign) bind coops cplusplus-object)
 
 #>
 #include <RInside.h>
 using Rcpp::RObject;
-RInside rinstance(0, 0, true, false, true);
+
+RInside rinstance(0, NULL, false, false, true);
 Rcpp::RObject currentRobj;
 <#
 
@@ -24,7 +25,7 @@ Rcpp::RObject currentRobj;
 
 ;; R -> Scheme
 (define (r-object->scheme-object x)
-  (if (string=? (r-object-type-string x) "NumericVector")
+  (if (string=? (r-object-type x) "NumericVector")
       (r-vector->scheme-vector x NumericVector_ref R_length)
       "<???>"))
 
