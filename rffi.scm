@@ -63,13 +63,13 @@ RInside rinstance(0, NULL, false, false, true);
 (define (r-object->scheme-object x)
   (let* ([type (r-object-sexp-type x)]
          [conv (hash-table-ref/default +r-object->scheme-object-table+ type identity)])
-    (cons type (conv x))))
+    (list type (conv x))))
 
 (bind-type rffi_sexp c-pointer scheme-object->r-object r-object->scheme-object)
 
 (bind*
 #<<CPP
-rffi_sexp rffi_eval(const char *str) {
+rffi_sexp rffi_eval(const char *str) {    
     try {
 	// on heap???
 	return rinstance.parseEval(str);
@@ -88,6 +88,10 @@ double numeric_vector_ref(rffi_sexp rsxp, int i) {
 
 int integer_vector_ref(rffi_sexp rsxp, int i) {
     return (INTEGER((SEXP) rsxp))[i];
+}
+
+rffi_sexp list_ref(rffi_sexp rsxp, int i) {
+    return VECTOR_ELT((SEXP) rsxp, i);
 }
 
 int rffi_sexp_type(rffi_sexp rsxp) {
@@ -119,5 +123,7 @@ CPP
                  'INTSXP
                  (make-r-vector->scheme-object integer_vector_ref rffi_sexp_length))
 
-
+(hash-table-set! +r-object->scheme-object-table+
+                 'VECSXP
+                 (make-r-vector->scheme-object list_ref rffi_sexp_length))
 )
