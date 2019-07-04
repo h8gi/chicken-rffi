@@ -26,8 +26,6 @@
     (if (eof-object? result) ""
         (srfi-13:string-trim-both result))))
 
-
-
 (define CXX (r-config "CXX"))
 
 (define CPPFLAGS

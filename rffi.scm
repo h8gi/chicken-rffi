@@ -25,22 +25,30 @@ Rcpp::RObject currentRobj;
 
 ;; R -> Scheme
 (define (r-object->scheme-object x)
-  (if (string=? (r-object-type x) "NumericVector")
-      (r-vector->scheme-vector x NumericVector_ref R_length)
-      "<???>"))
+  (cons (if (string=? (r-object-type x) "NumericVector")
+            (r-vector->scheme-vector x numeric_vector_ref robject_length)
+            x)
+        (r-object-sexp-type x)))
 
 (bind-type robject (c-pointer "RObject") scheme-object->r-object r-object->scheme-object)
 
 (bind*
 #<<CPP
 robject rffi_eval(const char *str) {
-    Rcpp::RObject x = rinstance.parseEval(str);
-    // on heap???
-    currentRobj = x;
+    try {
+	// on heap???
+	currentRobj = (Rcpp::as< Rcpp::RObject >(rinstance.parseEval(str)));
+    } catch(std::exception& ex) {
+	std::cerr << "Exception caught: " << ex.what() << std::endl;
+	currentRobj.set__(R_NilValue);
+    } catch(...){
+	std::cerr << "Unknown exception caught" << std::endl;
+	currentRobj.set__(R_NilValue);
+    }
     return &currentRobj;
 }
 
-char *RObject_Type_asString(robject robj) {
+char *robject_type_asstring(robject robj) {
     char *type_str;
     Rcpp::RObject x = *robj;
     if (Rcpp::is<Rcpp::NumericVector>(x)) {
@@ -70,18 +78,23 @@ char *RObject_Type_asString(robject robj) {
     C_return(type_str);
 }
 
-double NumericVector_ref(robject robj, int i) {
+double numeric_vector_ref(robject robj, int i) {
     return (Rcpp::as< Rcpp::NumericVector >(*robj))[i];
 }
 
-int IntegerVector_ref(robject robj, int i) {
+int integer_vector_ref(robject robj, int i) {
     return (Rcpp::as< Rcpp::IntegerVector >(*robj))[i];
 }
 
-char *CharacterVector_ref(robject robj, int i) {
+char *character_vector_ref(robject robj, int i) {
     return (Rcpp::as< Rcpp::CharacterVector >(*robj))[i];
 }
-int R_length(robject robj) {
+
+int robject_sexp_type(robject robj) {
+    return robj->sexp_type();
+}
+
+int robject_length(robject robj) {
     return Rf_length((SEXP) *robj);
 }
 
@@ -91,6 +104,40 @@ CPP
 (define r-eval rffi_eval)
 
 (define (r-object-type robj)
-  (RObject_Type_asString robj))
+  (robject_type_asstring robj))
+
+(define +sexp-type-table+
+  '(
+    (0  . NILSXP     ) ;; /* nil = NULL */
+    (1  . SYMSXP     ) ;; /* symbols */
+    (2  . LISTSXP    ) ;; /* lists of dotted pairs */
+    (3  . CLOSXP     ) ;; /* closures */
+    (4  . ENVSXP     ) ;; /* environments */
+    (5  . PROMSXP    ) ;; /* promises: [un]evaluated closure arguments */
+    (6  . LANGSXP    ) ;; /* language constructs (special lists) */
+    (7  . SPECIALSXP ) ;; /* special forms */
+    (8  . BUILTINSXP ) ;; /* builtin non-special forms */
+    (9  . CHARSXP    ) ;; /* "scalar" string type (internal only)*/
+    (10 . LGLSXP     ) ;; /* logical vectors */
+    (13 . INTSXP     ) ;; /* integer vectors */
+    (14 . REALSXP    ) ;; /* real variables */
+    (15 . CPLXSXP    ) ;; /* complex variables */
+    (16 . STRSXP     ) ;; /* string vectors */
+    (17 . DOTSXP     ) ;; /* dot-dot-dot object */
+    (18 . ANYSXP     ) ;; /* make "any" args work */
+    (19 . VECSXP     ) ;; /* generic vectors */
+    (20 . EXPRSXP    ) ;; /* expressions vectors */
+    (21 . BCODESXP   ) ;; /* byte code */
+    (22 . EXTPTRSXP  ) ;; /* external pointer */
+    (23 . WEAKREFSXP ) ;; /* weak reference */
+    (24 . RAWSXP     ) ;; /* raw bytes */
+    (25 . S4SXP      ) ;; /* S4 non-vector */
+    (30 . NEWSXP     ) ;; /* fresh node creaed in new page */
+    (31 . FREESXP    ) ;; /* node released by GC */
+    (99 . FUNSXP     ) ;; /* Closure or Builtin */
+    ))
+
+(define (r-object-sexp-type robj)
+  (alist-ref (robject_sexp_type robj) +sexp-type-table+))
 
 )
