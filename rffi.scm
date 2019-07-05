@@ -5,10 +5,12 @@
           (chicken base)
           (chicken foreign)
           bind
+          srfi-4
           srfi-69)
 
 #>
 #include <RInside.h>
+#include <stdarg.h>
 using Rcpp::RObject;
 RInside rinstance(0, NULL, false, false, true);
 <#
@@ -50,6 +52,10 @@ RInside rinstance(0, NULL, false, false, true);
 (define (r-eval str)
   (rffi_eval str))
 
+(define (r-lambda funname)
+  (lambda args
+    (rffi_apply funname args)))
+
 (define (r-object-sexp-type rsxp)
   (hash-table-ref +sexp-type-table+ (rffi_sexp_type rsxp)))
 
@@ -57,6 +63,7 @@ RInside rinstance(0, NULL, false, false, true);
 ;; Scheme -> R
 (define (scheme-object->r-object value)
   (cond [(integer? value) value]
+        [(list? value) value]
         [else value]))
 
 ;; R -> Scheme
@@ -82,8 +89,18 @@ rffi_sexp rffi_eval(const char *str) {
     }
 }
 
+rffi_sexp rffi_apply(const char *func_name, rffi_sexp rsxp_list) {
+    Rcpp::Function docall("do.call");
+    Rcpp::Function f(func_name);
+    return docall(f, Rcpp::as<Rcpp::List>((SEXP) rsxp_list));
+}
+
 double numeric_vector_ref(rffi_sexp rsxp, int i) {
     return (REAL((SEXP) rsxp))[i];
+}
+
+rffi_sexp r_numeric_vector(double * vec, ___length(vec) int len) {
+    return Rcpp::NumericVector(vec, vec + len);
 }
 
 int integer_vector_ref(rffi_sexp rsxp, int i) {
