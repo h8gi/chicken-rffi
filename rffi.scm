@@ -13,7 +13,23 @@
 #include <stdarg.h>
 using Rcpp::RObject;
 RInside rinstance(0, NULL, false, false, true);
+
+SEXP new_r_list(C_word args) {
+    int nargs = C_i_length(args), i = 0;
+    Rcpp::List lst(nargs);
+    while (!C_truep(C_i_nullp(args))) {
+	lst[i] = C_i_car(args);
+	args = C_i_cdr(args);
+	i++;
+    }
+    return (SEXP)lst;
+}
+
+
 <#
+
+(define new-r-list
+  (foreign-lambda nonnull-c-pointer "new_r_list" scheme-object))
 
 (define +sexp-type-table+
   (alist->hash-table '(
@@ -63,7 +79,6 @@ RInside rinstance(0, NULL, false, false, true);
 ;; Scheme -> R
 (define (scheme-object->r-object value)
   (cond [(integer? value) value]
-        [(list? value) value]
         [else value]))
 
 ;; R -> Scheme
@@ -72,10 +87,13 @@ RInside rinstance(0, NULL, false, false, true);
          [conv (hash-table-ref/default +r-object->scheme-object-table+ type identity)])
     (list type (conv x))))
 
-(bind-type rffi_sexp c-pointer scheme-object->r-object r-object->scheme-object)
+(bind-type rffi_sexp c-pointer
+           ;; scheme-object->r-object r-object->scheme-object
+           )
 
 (bind*
 #<<CPP
+
 rffi_sexp rffi_eval(const char *str) {
     try {
 	// on heap???
@@ -88,12 +106,13 @@ rffi_sexp rffi_eval(const char *str) {
 	return R_NilValue;
     }
 }
-
+// rsxpのscheme listであるべき
 rffi_sexp rffi_apply(const char *func_name, rffi_sexp rsxp_list) {
     Rcpp::Function docall("do.call");
     Rcpp::Function f(func_name);
     return docall(f, Rcpp::as<Rcpp::List>((SEXP) rsxp_list));
 }
+
 
 double numeric_vector_ref(rffi_sexp rsxp, int i) {
     return (REAL((SEXP) rsxp))[i];
@@ -110,6 +129,12 @@ int integer_vector_ref(rffi_sexp rsxp, int i) {
 rffi_sexp list_ref(rffi_sexp rsxp, int i) {
     return Rcpp::as<Rcpp::List>((SEXP) rsxp)[i];
     // return VECTOR_ELT((SEXP) rsxp, i);
+}
+
+rffi_sexp r_list_append(rffi_sexp rsxp, rffi_sexp x) {
+    std::cout << x << "\n";
+    (Rcpp::as<Rcpp::List>((SEXP) rsxp)).push_back((SEXP) x);
+    return rsxp;
 }
 
 int rffi_sexp_type(rffi_sexp rsxp) {
@@ -143,5 +168,14 @@ CPP
 
 (hash-table-set! +r-object->scheme-object-table+
                  'VECSXP
-                 (make-r-vector->scheme-object list_ref rffi_sexp_length))
+                 (lambda (rsxp)
+                   (let ([length (rffi_sexp_length rsxp)])
+                     (let loop ([i 0]
+                                [lst '()])
+                       (if (< i length)
+                           (let ([item (list_ref rsxp i)])
+                             (loop (+ i 1) (cons (r-object->scheme-object item) lst)))
+                           (reverse lst))))))
+
+
 )
