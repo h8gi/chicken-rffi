@@ -10,16 +10,6 @@
   (let ([cmd-str (sprintf "~A/bin/R CMD config ~A" +r-home+ str)])
     (srfi-13:string-trim-both (execute (list cmd-str) capture: #t))))
 
-(define (rinside-try-compile cc cppflags ldflags)
-  (and (try-compile
-        (string-append "#include <RInside.h>\n" 
-                       "int main(int argc, char *argv[]) {  RInside R(argc, argv); return 0 ;}\n")
-        cc: cc
-        ldflags: ldflags
-        cflags: cppflags
-        verbose: #t)
-       (cons cppflags ldflags)))
-
 (define (r-slave str)
   (let* ([cmd-str (sprintf "echo '~A' | ~A/bin/R --vanilla --slave" str +r-home+)]
          [result  (execute (list cmd-str) capture: #t)])
@@ -57,7 +47,7 @@
                            "-v"
                            (sprintf "-cxx \"~A\"" CXX)
                            ;; for `clang: error: unsupported option '-fopenmp'`
-                           (sprintf "-L \"-Xpreprocessor ~A\"" LDLIBS) 
+                           (sprintf "-L \"-Xpreprocessor ~A\"" LDLIBS)
                            (sprintf "-C \"~A ~A\"" CXXFLAGS CPPFLAGS)
                            ))))
 (system cmd)
