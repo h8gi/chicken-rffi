@@ -13,6 +13,7 @@ chicken-install -s
 ## Usage
 
 ```scheme
+(import rffi)
 (r-eval '(sample (c 1 2 3) 10 #t) #:convert? #t)
 ;; => #s32(2 2 3 2 3 3 2 1 2 2)
 
