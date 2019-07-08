@@ -19,7 +19,10 @@ RInside rinstance(0, NULL, false, false, true);
   (c-pointer "SEXP"))
 
 (define (r-apply fname lst)
-  (assert (and 'r-apply (list? lst)))
+  (assert (and 'r-apply
+               (string? fname)
+               (rffi_exists fname "function")
+               (list? lst)))
   (let ([lst (map s->r lst)])
     (receive (value err)
         ((foreign-primitive void ((c-string fname) (scheme-object rsxp_list))
@@ -29,7 +32,7 @@ SEXP value;
 int error = 0;
 try {
     Rcpp::Function docall(\"do.call\");
-    Rcpp::Function f(fname);
+    Rcpp::Function f(fname); // can't catch
     Rcpp::List args = Rcpp::List::create();
     while(!C_truep(C_i_nullp(rsxp_list))) {
         Rcpp::RObject a = (SEXP)(C_c_pointer_or_null(C_u_i_car(rsxp_list)));
@@ -38,6 +41,7 @@ try {
     }
     value = docall(f, args);
 } catch(...) {
+   value = R_NilValue;
    error = -1;
 }
 C_word av[4];
@@ -52,13 +56,15 @@ C_values(4, av);
           (error "r error - r-apply")))))
 
 (define (r-eval expression)
-  (cond [(pair? expression)
-         (r-apply (symbol->string (car expression))
-                  (map r-eval (cdr expression)))]
-        [(symbol? expression)
-         (r-eval-string
-          (symbol->string expression))]
-        [else (s->r expression)]))
+  (define (inner expression)
+    (cond [(pair? expression)
+           (r-apply (symbol->string (car expression))
+                    (map inner (cdr expression)))]
+          [(symbol? expression)
+           (r-eval-string
+            (symbol->string expression))]
+          [else (s->r expression)]))
+  (r->s (inner expression)))
 
 (define (r-eval-string str)
   (receive (value err)
@@ -160,6 +166,10 @@ int rffi_integer_vector_ref(rffi_sexp rsxp, int i) {
     return (INTEGER((SEXP) rsxp))[i];
 }
 
+bool rffi_logical_vector_ref(rffi_sexp rsxp, int i) {
+    return (LOGICAL((SEXP) rsxp))[i];
+}
+
 rffi_sexp rffi_list_ref(rffi_sexp rsxp, int i) {
     return Rcpp::as<Rcpp::List>((SEXP) rsxp)[i];
     // return VECTOR_ELT((SEXP) rsxp, i);
@@ -179,6 +189,15 @@ int rffi_sexp_type(rffi_sexp rsxp) {
 
 int rffi_sexp_length(rffi_sexp rsxp) {
     return Rf_length((SEXP) rsxp);
+}
+
+bool rffi_exists(char * name, char * mode) {
+    Rcpp::Function exists("exists");
+    Rcpp::String name_sxp(name);
+    Rcpp::String mode_sxp(mode);
+    Rcpp::LogicalVector bv = exists(name_sxp, Rcpp::Named("mode") = mode_sxp);
+    bool b = Rcpp::is_true(all(bv));
+    return b;
 }
 
 CPP
@@ -212,6 +231,10 @@ CPP
                            (let ([item (rffi_list_ref rsxp i)])
                              (loop (+ i 1) (cons (r->s item) lst)))
                            (reverse lst))))))
+
+(hash-table-set! +r->s-table+
+                 'LGLSXP
+                 (make-r-vector->scheme-object rffi_logical_vector_ref rffi_sexp_length make-vector vector-set!))
 
 
 )
