@@ -140,8 +140,9 @@ C_values(4, av);
 ;; Scheme -> R
 (define (s->r value)
   (cond [(integer? value) (rffi_integer_scalar value)]
-        [(number? value)  (rffi_numeric_scalar value)]
+        [(number?  value) (rffi_numeric_scalar value)]
         [(boolean? value) (rffi_boolean_scalar value)]
+        [(string?  value) (rffi_string_scalar  value)]
         [(f64vector? value)
          (rffi_numeric_vector value)]
         [(s32vector? value)
@@ -175,9 +176,12 @@ bool rffi_logical_vector_ref(rffi_sexp rsxp, int i) {
     return (LOGICAL((SEXP) rsxp))[i];
 }
 
+char * rffi_string_vector_ref(rffi_sexp rsxp, int i) {
+    return Rcpp::as<Rcpp::StringVector>((SEXP) rsxp)[i];
+}
+
 rffi_sexp rffi_list_ref(rffi_sexp rsxp, int i) {
     return Rcpp::as<Rcpp::List>((SEXP) rsxp)[i];
-    // return VECTOR_ELT((SEXP) rsxp, i);
 }
 
 rffi_sexp rffi_numeric_vector(double * vec, ___length(vec) int len) {
@@ -198,6 +202,10 @@ rffi_sexp rffi_integer_scalar(int i) {
 
 rffi_sexp rffi_boolean_scalar(bool b) {
     return Rf_ScalarLogical(b ? 1 : 0);
+}
+
+rffi_sexp rffi_string_scalar(char * str) {
+    return Rf_ScalarString(Rf_mkChar(str));
 }
 
 int rffi_sexp_type(rffi_sexp rsxp) {
@@ -252,6 +260,8 @@ CPP
 (hash-table-set! +r->s-table+
                  'LGLSXP
                  (make-r-vector->scheme-object rffi_logical_vector_ref rffi_sexp_length make-vector vector-set!))
-
+(hash-table-set! +r->s-table+
+                 'STRSXP
+                 (make-r-vector->scheme-object rffi_string_vector_ref rffi_sexp_length make-vector vector-set!))
 
 )
