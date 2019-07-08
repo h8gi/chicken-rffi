@@ -56,14 +56,15 @@ C_values(4, av);
           value
           (error "r error - r-apply")))))
 
-(define (r-eval expression #!optional (convert? #t))
+(define (r-eval expression #!key (convert? #t))
   (define (inner expression)
     (cond [(pair? expression)
            (r-apply (symbol->string (car expression))
                     (map inner (cdr expression)))]
           [(symbol? expression)
            (r-eval-string
-            (symbol->string expression))]
+            (symbol->string expression)
+            #:convert? #f)]
           [else (s->r expression)]))
   ((if convert? r->s identity) (inner expression)))
 
@@ -71,7 +72,7 @@ C_values(4, av);
   (lambda (port)
     (r-eval (read port))))
 
-(define (r-eval-string str)
+(define (r-eval-string str #!key (convert? #t))
   (receive (value err)
       ((foreign-primitive void ((c-string str))
          "
@@ -92,7 +93,7 @@ C_values(4, av);
 ")
        str)
     (if (zero? err)
-        value
+        ((if convert? r->s identity) value)
         (error "r error - r-eval-string"))))
 
 (define +sexp-type-table+
