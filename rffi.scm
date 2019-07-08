@@ -56,18 +56,20 @@ C_values(4, av);
           value
           (error "r error - r-apply")))))
 
-(define (r-eval expression)
-  (cond [(pair? expression)
-         (r-apply (symbol->string (car expression))
-                  (map r-eval (cdr expression)))]
-        [(symbol? expression)
-         (r-eval-string
-          (symbol->string expression))]
-        [else (s->r expression)]))
+(define (r-eval expression #!optional (convert? #t))
+  (define (inner expression)
+    (cond [(pair? expression)
+           (r-apply (symbol->string (car expression))
+                    (map inner (cdr expression)))]
+          [(symbol? expression)
+           (r-eval-string
+            (symbol->string expression))]
+          [else (s->r expression)]))
+  ((if convert? r->s identity) (inner expression)))
 
-(set-read-syntax! 'R
+(set-read-syntax! 'r
   (lambda (port)
-    (r->s (r-eval (read port)))))
+    (r-eval (read port))))
 
 (define (r-eval-string str)
   (receive (value err)
@@ -136,10 +138,9 @@ C_values(4, av);
 
 ;; Scheme -> R
 (define (s->r value)
-  (cond [(integer? value) (s->r
-                           (s32vector value))]
-        [(number? value) (s->r
-                          (f64vector value))]
+  (cond [(integer? value) (rffi_integer_scalar value)]
+        [(number? value)  (rffi_numeric_scalar value)]
+        [(boolean? value) (rffi_boolean_scalar value)]
         [(f64vector? value)
          (rffi_numeric_vector value)]
         [(s32vector? value)
@@ -184,6 +185,18 @@ rffi_sexp rffi_numeric_vector(double * vec, ___length(vec) int len) {
 
 rffi_sexp rffi_integer_vector(int * vec, ___length(vec) int len) {
     return Rcpp::IntegerVector(vec, vec + len);
+}
+
+rffi_sexp rffi_numeric_scalar(double d) {
+    return Rf_ScalarReal(d);
+}
+
+rffi_sexp rffi_integer_scalar(int i) {
+    return Rf_ScalarInteger(i);
+}
+
+rffi_sexp rffi_boolean_scalar(bool b) {
+    return Rf_ScalarLogical(b ? 1 : 0);
 }
 
 int rffi_sexp_type(rffi_sexp rsxp) {
