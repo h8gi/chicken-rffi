@@ -70,7 +70,7 @@ C_values(4, av);
 
 (set-read-syntax! 'r
   (lambda (port)
-    (r-eval (read port))))
+    (list 'quote (r-eval (read port)))))
 
 (define (r-eval-string str #!key (convert? #t))
   (receive (value err)
