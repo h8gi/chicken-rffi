@@ -13,23 +13,67 @@
 #include <stdarg.h>
 using Rcpp::RObject;
 RInside rinstance(0, NULL, false, false, true);
-
-SEXP new_r_list(C_word args) {
-    int nargs = C_i_length(args), i = 0;
-    Rcpp::List lst(nargs);
-    while (!C_truep(C_i_nullp(args))) {
-	lst[i] = C_i_car(args);
-	args = C_i_cdr(args);
-	i++;
-    }
-    return (SEXP)lst;
-}
-
-
 <#
 
-(define new-r-list
-  (foreign-lambda nonnull-c-pointer "new_r_list" scheme-object))
+(define-foreign-type SEXP
+  (c-pointer "SEXP"))
+
+(define (r-apply fname lst)
+  (assert (and 'r-apply (list? lst)))
+  (receive (value err)
+      ((foreign-primitive void ((c-string fname) (scheme-object rsxp_list))
+         "
+Rcpp::Function docall(\"do.call\");
+Rcpp::Function f(fname);
+Rcpp::List args = Rcpp::List::create();
+while(!C_truep(C_i_nullp(rsxp_list))) {
+    Rcpp::RObject a = (SEXP)(C_c_pointer_or_null(C_u_i_car(rsxp_list)));
+    args.push_back(a);
+    rsxp_list = C_u_i_cdr(rsxp_list);
+}
+
+C_word *pointer = C_alloc(C_SIZEOF_POINTER);
+SEXP value;
+int error = 0;
+try {
+   value = docall(f, args);
+} catch(...) {
+   error = -1;
+}
+C_word av[4];
+av[0] = C_SCHEME_UNDEFINED;
+av[1] = C_k;
+av[2] = C_mpointer(&pointer, value);
+av[3] = C_fix(error);
+C_values(4, av);
+") fname lst)
+    (if (zero? err)
+        value
+        (error "r error - r-apply"))))
+
+(define (r-eval-string str)
+  (receive (value err)
+      ((foreign-primitive void ((c-string str))
+         "
+C_word *pointer = C_alloc(C_SIZEOF_POINTER);
+SEXP value;
+int error = 0;
+try {
+    value = rinstance.parseEval(str);
+} catch(...){
+    error = -1;
+}
+C_word av[4];
+av[0] = C_SCHEME_UNDEFINED;
+av[1] = C_k;
+av[2] = C_mpointer(&pointer, value);
+av[3] = C_fix(error);
+C_values(4, av);
+")
+       str)
+    (if (zero? err)
+        value
+        (error "r error - r-eval-string"))))
 
 (define +sexp-type-table+
   (alist->hash-table '(
@@ -65,16 +109,12 @@ SEXP new_r_list(C_word args) {
 (define +r-object->scheme-object-table+ (make-hash-table))
 (define +scheme-object->r-object-table+ (make-hash-table))
 
-(define (r-eval str)
-  (rffi_eval str))
-
 (define (r-lambda funname)
   (lambda args
     (rffi_apply funname args)))
 
 (define (r-object-sexp-type rsxp)
   (hash-table-ref +sexp-type-table+ (rffi_sexp_type rsxp)))
-
 
 ;; Scheme -> R
 (define (scheme-object->r-object value)
@@ -93,7 +133,6 @@ SEXP new_r_list(C_word args) {
 
 (bind*
 #<<CPP
-
 rffi_sexp rffi_eval(const char *str) {
     try {
 	// on heap???
@@ -107,12 +146,17 @@ rffi_sexp rffi_eval(const char *str) {
     }
 }
 // rsxpのscheme listであるべき
-rffi_sexp rffi_apply(const char *func_name, rffi_sexp rsxp_list) {
+rffi_sexp rffi_apply(const char *func_name, C_word rsxp_list) {
     Rcpp::Function docall("do.call");
     Rcpp::Function f(func_name);
-    return docall(f, Rcpp::as<Rcpp::List>((SEXP) rsxp_list));
+    Rcpp::List args = Rcpp::List::create();
+    while(!C_truep(C_i_nullp(rsxp_list))) {
+	Rcpp::RObject a = (SEXP)(C_c_pointer_or_null(C_u_i_car(rsxp_list)));
+	args.push_back(a);
+	rsxp_list = C_u_i_cdr(rsxp_list);
+    }
+    return docall(f, args);
 }
-
 
 double numeric_vector_ref(rffi_sexp rsxp, int i) {
     return (REAL((SEXP) rsxp))[i];

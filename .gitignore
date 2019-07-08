@@ -4,6 +4,7 @@
 *.import.scm
 *.link
 README.html
+*.tmp
 
 rffi.cpp
 rffi.build.sh
