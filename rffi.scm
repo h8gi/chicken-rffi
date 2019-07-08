@@ -4,6 +4,7 @@
   (import scheme
           (chicken base)
           (chicken foreign)
+          (chicken read-syntax)
           bind
           srfi-4
           srfi-69)
@@ -56,15 +57,17 @@ C_values(4, av);
           (error "r error - r-apply")))))
 
 (define (r-eval expression)
-  (define (inner expression)
-    (cond [(pair? expression)
-           (r-apply (symbol->string (car expression))
-                    (map inner (cdr expression)))]
-          [(symbol? expression)
-           (r-eval-string
-            (symbol->string expression))]
-          [else (s->r expression)]))
-  (r->s (inner expression)))
+  (cond [(pair? expression)
+         (r-apply (symbol->string (car expression))
+                  (map r-eval (cdr expression)))]
+        [(symbol? expression)
+         (r-eval-string
+          (symbol->string expression))]
+        [else (s->r expression)]))
+
+(set-read-syntax! 'R
+  (lambda (port)
+    (r->s (r-eval (read port)))))
 
 (define (r-eval-string str)
   (receive (value err)
