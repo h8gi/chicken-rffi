@@ -25,6 +25,7 @@ chicken-install -s
 ## Known issues
 
 - NA handling
+- Named args
 - XQuartz `plot` freezes on macOS.
 
 ## Related repositories

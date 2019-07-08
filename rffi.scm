@@ -151,6 +151,7 @@ C_values(4, av);
          (r-apply "list" value)]
         [(vector? value)
          (r-apply "c" value)]
+        [(eq? 'NULL value) (r-eval-string "NULL" #:convert? #f)]
         [else value]))
 
 ;; R -> Scheme
@@ -264,4 +265,7 @@ CPP
                  'STRSXP
                  (make-r-vector->scheme-object rffi_string_vector_ref rffi_sexp_length make-vector vector-set!))
 
+(hash-table-set! +r->s-table+
+                 'NILSXP
+                 (lambda (x) 'NULL))
 )
