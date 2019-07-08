@@ -3,5 +3,5 @@
  (license "public domain")
  (category ffi)
  (build-dependencies shell srfi-13)
- (dependencies bind)
+ (dependencies bind srfi-69)
  (components (extension rffi (custom-build "build.sh") (csc-options "-d2" "-O0" "-c++"))))
