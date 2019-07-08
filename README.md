@@ -5,6 +5,7 @@ rffi is a [Chicken Scheme](https://www.call-cc.org/) extension for interacting w
 ## Installation
 
 ```bash
+Rscript -e "install.packages(\"RInside\")"
 git clone https://github.com/h8gi/chicken-rffi
 cd chicken-rffi
 chicken-install -s
@@ -27,5 +28,6 @@ chicken-install -s
 
 ## Related repositories
 
+- [https://github.com/eddelbuettel/rinside](https://github.com/eddelbuettel/rinside)
 - [https://github.com/klutometis/R](https://github.com/klutometis/R)
 - [https://github.com/iraikov/chicken-pyffi](https://github.com/iraikov/chicken-pyffi)
