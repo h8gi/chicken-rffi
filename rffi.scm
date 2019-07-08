@@ -33,7 +33,7 @@ SEXP value;
 int error = 0;
 try {
     Rcpp::Function docall(\"do.call\");
-    Rcpp::Function f(fname); // can't catch
+    Rcpp::Function f(fname); // can't catch undefined error. why???
     Rcpp::List args = Rcpp::List::create();
     while(!C_truep(C_i_nullp(rsxp_list))) {
         Rcpp::RObject a = (SEXP)(C_c_pointer_or_null(C_u_i_car(rsxp_list)));
