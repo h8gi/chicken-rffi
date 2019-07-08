@@ -1,5 +1,25 @@
 # rffi
 
+rffi is a [Chicken Scheme](https://www.call-cc.org/) extension for interacting with [R](https://www.r-project.org/).
+
+## Installation
+
+```bash
+git clone https://github.com/h8gi/chicken-rffi
+cd chicken-rffi
+chicken-install -s
+```
+
+## Usage
+
+```scheme
+(r-eval '(sample (c 1 2 3) 10 #t) #:convert? #t)
+;; => #s32(2 2 3 2 3 3 2 1 2 2)
+
+(r-eval-string "mean(sample(c(1,2,3), 10, TRUE))" #:convert? #t)
+;; => 2.3
+```
+
 ## Known issues
 
 - XQuartz `plot` freezes on macOS.
