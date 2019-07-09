@@ -248,7 +248,7 @@ CPP
                  (make-r-vector->scheme-object rffi_integer_vector_ref rffi_sexp_length make-s32vector s32vector-set!))
 
 (hash-table-set! +r->s-table+
-'VECSXP
+                 'VECSXP
                  (lambda (rsxp)
                    (let ([length (rffi_sexp_length rsxp)])
                      (let loop ([i 0]
