@@ -19,9 +19,7 @@
 (define CXX (r-config "CXX"))
 
 (define CPPFLAGS
-  (srfi-13:string-join
-   (list "-Wall"
-         (r-config "CPPFLAGS"))))
+  (r-config "CPPFLAGS"))
 
 (define CXXFLAGS
   (srfi-13:string-join
