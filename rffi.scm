@@ -21,9 +21,9 @@ RInside rinstance(0, NULL, false, false, true);
 
 (define (r-apply fname lst)
   (assert (and 'r-apply
-               (string? fname)
-               (rffi_exists fname "function")
-               (list? lst)))
+                (string? fname)
+                (rffi_exists fname "function")
+                (list? lst)))
   (let ([lst (map s->r lst)])
     (receive (value err)
         ((foreign-primitive void ((c-string fname) (scheme-object rsxp_list))
