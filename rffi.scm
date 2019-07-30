@@ -136,43 +136,45 @@ C_values(4, av);
 
 ;; Scheme -> R
 (define (s->r value)
-  (cond [(integer? value) (rffi_integer_scalar value)]
-        [(number?  value) (rffi_numeric_scalar value)]
-        [(boolean? value) (rffi_boolean_scalar value)]
-        [(string?  value) (rffi_string_scalar  value)]
-        [(f64vector? value)
-         (rffi_numeric_vector value)]
-        [(s32vector? value)
-         (rffi_integer_vector value)]
-        [(list? value)
-         (r-apply "list" value)]
-        [(vector? value)
-         (r-apply "c" (vector->list value))]
-        [(eq? 'NULL value) (r-eval-string "NULL" #:convert? #f)]
-        [else value]))
+  (cond
+   ;; [(symbol? value)  (rffi_symbol (symbol->string value))]
+   [(integer? value) (rffi_integer_scalar value)]
+   [(number?  value) (rffi_numeric_scalar value)]
+   [(boolean? value) (rffi_boolean_scalar value)]
+   [(string?  value) (rffi_string_scalar  value)]
+   [(f64vector? value)
+    (rffi_numeric_vector value)]
+   [(s32vector? value)
+    (rffi_integer_vector value)]
+   [(list? value)
+    (r-apply "list" value)]
+   [(vector? value)
+    (r-apply "c" (vector->list value))]
+   [(eq? 'NULL value) (r-eval-string "NULL" #:convert? #f)]
+   [else value]))
 
 ;; R -> Scheme
 (define (r->s x)
   (let ([type (r-object-sexp-type x)])
     ((case type
-        [(VECSXP) (lambda (rsxp)
-                    (let ([length (rffi_sexp_length rsxp)])
-                      (let loop ([i 0]
-                                 [lst '()])
-                        (if (< i length)
-                            (let ([item (rffi_list_ref rsxp i)])
-                              (loop (+ i 1) (cons (r->s item) lst)))
-                            (reverse lst)))))]
-        [(REALSXP) (make-r-vector->scheme-object
-                    rffi_numeric_vector_ref rffi_sexp_length make-f64vector f64vector-set!)]
-        [(INTSXP) (make-r-vector->scheme-object
-                   rffi_integer_vector_ref rffi_sexp_length make-s32vector s32vector-set!)]
-        [(LGLSXP) (make-r-vector->scheme-object
-                   rffi_logical_vector_ref rffi_sexp_length make-vector vector-set!)]
-        [(STRSXP) (make-r-vector->scheme-object
-                   rffi_string_vector_ref rffi_sexp_length make-vector vector-set!)]
-        [(NILSXP) (lambda (x) 'NULL)]
-        [else (lambda (x) (cons type x))])
+       [(VECSXP) (lambda (rsxp)
+                   (let ([length (rffi_sexp_length rsxp)])
+                     (let loop ([i 0]
+                                [lst '()])
+                       (if (< i length)
+                           (let ([item (rffi_list_ref rsxp i)])
+                             (loop (+ i 1) (cons (r->s item) lst)))
+                           (reverse lst)))))]
+       [(REALSXP) (make-r-vector->scheme-object
+                   rffi_numeric_vector_ref rffi_sexp_length make-f64vector f64vector-set!)]
+       [(INTSXP) (make-r-vector->scheme-object
+                  rffi_integer_vector_ref rffi_sexp_length make-s32vector s32vector-set!)]
+       [(LGLSXP) (make-r-vector->scheme-object
+                  rffi_logical_vector_ref rffi_sexp_length make-vector vector-set!)]
+       [(STRSXP) (make-r-vector->scheme-object
+                  rffi_string_vector_ref rffi_sexp_length make-vector vector-set!)]
+       [(NILSXP) (lambda (x) 'NULL)]
+       [else (lambda (x) (cons type x))])
      x)))
 
 (define (make-r-vector->scheme-object ref-proc len-proc make-vector vector-set!)
@@ -207,6 +209,10 @@ char * rffi_string_vector_ref(rffi_sexp rsxp, int i) {
 
 rffi_sexp rffi_list_ref(rffi_sexp rsxp, int i) {
     return Rcpp::as<Rcpp::List>((SEXP) rsxp)[i];
+}
+
+rffi_sexp rffi_symbol(char * str) {
+    return Rcpp::as<Rcpp::Symbol>((SEXP) str);
 }
 
 rffi_sexp rffi_numeric_vector(double * vec, ___length(vec) int len) {
